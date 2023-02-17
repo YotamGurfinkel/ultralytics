@@ -235,9 +235,10 @@ class DetectionModel(BaseModel):
         y[-1] = y[-1][..., i:]  # small
         return y
 
-    def load(self, weights, verbose=True):
+    def load(self, weights, verbose=True, intersect=True):
         csd = weights.float().state_dict()  # checkpoint state_dict as FP32
-        csd = intersect_dicts(csd, self.state_dict())  # intersect
+        if intersect:
+            csd = intersect_dicts(csd, self.state_dict())  # intersect
         self.load_state_dict(csd, strict=False)  # load
         if verbose and RANK == -1:
             LOGGER.info(f'Transferred {len(csd)}/{len(self.model.state_dict())} items from pretrained weights')

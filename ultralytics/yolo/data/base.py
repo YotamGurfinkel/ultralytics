@@ -129,6 +129,8 @@ class BaseDataset(Dataset):
         return self.ims[i], self.im_hw0[i], self.im_hw[i]  # im, hw_original, hw_resized
 
     def cache_images(self, cache):
+        global LOCAL_RANK
+        LOCAL_RANK = int(os.getenv("LOCAL_RANK", "-1"))
         # cache images to memory or disk
         gb = 0  # Gigabytes of cached images
         self.im_hw0, self.im_hw = [None] * self.ni, [None] * self.ni

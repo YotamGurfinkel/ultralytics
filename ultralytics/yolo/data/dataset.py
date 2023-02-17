@@ -3,6 +3,7 @@
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
+import os
 
 import torchvision
 from tqdm import tqdm
@@ -94,6 +95,8 @@ class YOLODataset(BaseDataset):
         return x
 
     def get_labels(self):
+        global LOCAL_RANK
+        LOCAL_RANK = int(os.getenv("LOCAL_RANK", "-1"))
         self.label_files = img2label_paths(self.im_files)
         cache_path = Path(self.label_files[0]).parent.with_suffix(".cache")
         try:

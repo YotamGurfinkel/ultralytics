@@ -72,6 +72,10 @@ class BaseTrainer:
     """
 
     def __init__(self, cfg=DEFAULT_CFG, overrides=None):
+        global LOCAL_RANK
+        global RANK
+        RANK = int(os.getenv("RANK", "-1"))
+        LOCAL_RANK = RANK
         """
         Initializes the BaseTrainer class.
 
@@ -86,6 +90,7 @@ class BaseTrainer:
         self.validator = None
         self.model = None
         self.metrics = None
+        self.ckpt = None
         init_seeds(self.args.seed + 1 + RANK, deterministic=self.args.deterministic)
 
         # Dirs
@@ -166,6 +171,10 @@ class BaseTrainer:
             callback(self)
 
     def train(self):
+        global RANK
+        global LOCAL_RANK
+        RANK = int(os.getenv("RANK", "-1"))
+        LOCAL_RANK = RANK
         # Allow device='', device=None on Multi-GPU systems to default to device=0
         if isinstance(self.args.device, int) or self.args.device:  # i.e. device=0 or device=[0,1,2,3]
             world_size = torch.cuda.device_count()
@@ -175,7 +184,7 @@ class BaseTrainer:
             world_size = 0
 
         # Run subprocess if DDP training, else train normally
-        if world_size > 1 and "LOCAL_RANK" not in os.environ:
+        if False and world_size > 1 and "LOCAL_RANK" not in os.environ:
             cmd, file = generate_ddp_command(world_size, self)  # security vulnerability in Snyk scans
             try:
                 subprocess.run(cmd, check=True)
@@ -187,8 +196,8 @@ class BaseTrainer:
             self._do_train(RANK, world_size)
 
     def _setup_ddp(self, rank, world_size):
-        # os.environ['MASTER_ADDR'] = 'localhost'
-        # os.environ['MASTER_PORT'] = '9020'
+        #os.environ['MASTER_ADDR'] = 'localhost'
+        #os.environ['MASTER_PORT'] = '9020'
         torch.cuda.set_device(rank)
         self.device = torch.device('cuda', rank)
         self.console.info(f"DDP settings: RANK {rank}, WORLD_SIZE {world_size}, DEVICE {self.device}")
@@ -408,11 +417,12 @@ class BaseTrainer:
         """
         load/create/download model for any task.
         """
-        if isinstance(self.model, torch.nn.Module):  # if model is loaded beforehand. No setup needed
-            return
-
         model, weights = self.model, None
-        ckpt = None
+        ckpt = self.ckpt
+        if ckpt.endswith(".pt") and isinstance(self.model, nn.Module):
+            weights, ckpt = attempt_load_one_weight(model)
+            self.model.load(weights, intersect=False)
+            return ckpt
         if str(model).endswith(".pt"):
             weights, ckpt = attempt_load_one_weight(model)
             cfg = ckpt["model"].yaml

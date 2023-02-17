@@ -32,7 +32,7 @@ def check_class_names(names):
 
 class AutoBackend(nn.Module):
 
-    def __init__(self, weights='yolov8n.pt', device=torch.device('cpu'), dnn=False, data=None, fp16=False, fuse=True):
+    def __init__(self, weights='yolov8n.pt', device=torch.device('cpu'), dnn=False, data=None, fp16=False, fuse=False):
         """
         MultiBackend class for python inference on various platforms using Ultralytics YOLO.
 
