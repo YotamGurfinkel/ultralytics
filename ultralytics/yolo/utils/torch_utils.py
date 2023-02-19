@@ -338,7 +338,7 @@ def strip_optimizer(f='best.pt', s=''):
     args = {**DEFAULT_CFG_DICT, **x['train_args']}  # combine model args with default args, preferring model args
     if x.get('ema'):
         x['model'] = x['ema']  # replace model with ema
-    for k in 'optimizer', 'best_fitness', 'ema', 'updates':  # keys
+    for k in 'best_fitness', 'ema', 'updates':  # keys
         x[k] = None
     x['epoch'] = -1
     x['model'].half()  # to FP16

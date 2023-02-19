@@ -76,6 +76,10 @@ class BaseTrainer:
         global RANK
         RANK = int(os.getenv("RANK", "-1"))
         LOCAL_RANK = RANK
+        save_dir = None
+        if overrides and "save_dir" in overrides:
+            save_dir = overrides.get("save_dir")
+            del overrides["save_dir"]
         """
         Initializes the BaseTrainer class.
 
@@ -84,8 +88,11 @@ class BaseTrainer:
             overrides (dict, optional): Configuration overrides. Defaults to None.
         """
         self.args = get_cfg(cfg, overrides)
+        if save_dir:
+            self.args.save_dir = save_dir
         self.device = select_device(self.args.device, self.args.batch)
         self.check_resume()
+        self.args.epochs = 50
         self.console = LOGGER
         self.validator = None
         self.model = None
@@ -182,6 +189,8 @@ class BaseTrainer:
             world_size = 1  # default to device 0
         else:  # i.e. device='cpu' or 'mps'
             world_size = 0
+
+        world_size = 4
 
         # Run subprocess if DDP training, else train normally
         if False and world_size > 1 and "LOCAL_RANK" not in os.environ:
@@ -419,8 +428,8 @@ class BaseTrainer:
         """
         model, weights = self.model, None
         ckpt = self.ckpt
-        if ckpt.endswith(".pt") and isinstance(self.model, nn.Module):
-            weights, ckpt = attempt_load_one_weight(model)
+        if ckpt and ckpt.endswith(".pt") and isinstance(self.model, nn.Module):
+            weights, ckpt = attempt_load_one_weight(ckpt)
             self.model.load(weights, intersect=False)
             return ckpt
         if str(model).endswith(".pt"):
@@ -522,7 +531,7 @@ class BaseTrainer:
     def final_eval(self):
         for f in self.last, self.best:
             if f.exists():
-                strip_optimizer(f)  # strip optimizers
+                #strip_optimizer(f)  # strip optimizers
                 if f is self.best:
                     self.console.info(f'\nValidating {f}...')
                     self.metrics = self.validator(model=f)
@@ -555,9 +564,6 @@ class BaseTrainer:
             self.ema.ema.load_state_dict(ckpt['ema'].float().state_dict())  # EMA
             self.ema.updates = ckpt['updates']
         if self.resume:
-            assert start_epoch > 0, \
-                f'{self.args.model} training to {self.epochs} epochs is finished, nothing to resume.\n' \
-                f"Start a new training without --resume, i.e. 'yolo task=... mode=train model={self.args.model}'"
             LOGGER.info(
                 f'Resuming training from {self.args.model} from epoch {start_epoch + 1} to {self.epochs} total epochs')
         if self.epochs < start_epoch:

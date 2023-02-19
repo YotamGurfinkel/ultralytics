@@ -224,6 +224,8 @@ class YOLO:
         return exporter(model=self.model)
 
     def train(self, **kwargs):
+        global RANK
+        RANK = int(os.getenv("RANK", "-1"))
         """
         Trains the model on a given dataset.
 
@@ -254,6 +256,7 @@ class YOLO:
         # update model and cfg after training
         if RANK in {0, -1}:
             self.model, _ = attempt_load_one_weight(str(self.trainer.best))
+            self.ckpt_path = self.trainer.best
             self.overrides = self.model.args
             self.metrics_data = getattr(self.trainer.validator, 'metrics', None)  # TODO: no metrics returned by DDP
 
