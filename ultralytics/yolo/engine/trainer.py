@@ -190,7 +190,7 @@ class BaseTrainer:
         else:  # i.e. device='cpu' or 'mps'
             world_size = 0
 
-        world_size = 4
+        world_size = 2
 
         # Run subprocess if DDP training, else train normally
         if False and world_size > 1 and "LOCAL_RANK" not in os.environ:
