@@ -45,8 +45,8 @@ class YOLODataset(BaseDataset):
         assert not (self.use_segments and self.use_keypoints), "Can not use both segments and keypoints."
         super().__init__(img_path, imgsz, cache, augment, hyp, prefix, rect, batch_size, stride, pad, single_cls)
 
-    def __getitem__(self):
-        label = super().__getitem__()
+    def __getitem__(self, index):
+        label = super().__getitem__(index)
         if self.preprocess:
             label["img"] = label["img"].float() / 255
         return label
